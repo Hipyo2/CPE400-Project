@@ -2,18 +2,40 @@
 #Group: Brendan Aguiar, Nicholas Ang
 #UDP-based reliable data transfer algorithm
 
+from copyreg import add_extension
 import socket
 import os
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+tcpClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)#SOCK_STREAM establishes TCP protocol
+udpClient = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)#SOCK_DGRAM establishes UDP protocol
 host = socket.gethostname()
 port = 12345
 address = (host, port)
 
+def startDataChannel(contents):
+	udpClient.sendto(contents.encode('ascii'), address)
+	print("[SERVER RESPONSE]: " + udpClient.recvfrom(1024)[0].decode('ascii'))
+	closeConnection = '@'
+	udpClient.sendto(closeConnection.encode('ascii'), address)
+
+def startControlChannel(fileName, fileSize):
+	tcpClient.connect(address)
+	tcpClient.send(fileName.encode('ascii'))
+	recmsg1 = tcpClient.recv(1024).decode('ascii')
+	print("[SERVER RESPONSE]: {}".format(recmsg1))
+	tcpClient.send(fileSize.encode('ascii'))
+	recmsg2 = tcpClient.recv(1024).decode('ascii')
+	print("[SERVER RESPONSE]: {}".format(recmsg2))
+	closeConnection = '@'
+	tcpClient.send(closeConnection.encode('ascii'))
+
+
+
 if __name__ == "__main__":
 	print("Please input file name")
 	fileName = input()
-	client.connect(address)
-	client.send(fileName.encode('ascii'))
-	msg = client.recv(1024).decode('ascii')
-	print("[SERVER RESPONSE]: {}".format(msg))
+	file = open(fileName, 'r')#open for reading
+	contents = file.read()
+	fileSize = len(contents)
+	startControlChannel(fileName, str(fileSize))
+	startDataChannel(contents)
