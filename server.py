@@ -25,7 +25,7 @@ class udp_server_connection():
 			packet = packet.decode('ascii')
 			if packet != '@':
 				print("{}".format(packet))
-				msg = "received up to " + str(len(packet)) + " characters"
+				msg = "received up to " + str(len(packet)) + " bytes"
 				self.server.sendto(msg.encode('ascii'), addr)
 			else:
 				established = False
