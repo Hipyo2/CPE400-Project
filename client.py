@@ -5,6 +5,7 @@
 from copyreg import add_extension
 import socket
 import os
+import time
 
 tcpClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)#SOCK_STREAM establishes TCP protocol
 udpClient = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)#SOCK_DGRAM establishes UDP protocol
@@ -50,5 +51,6 @@ if __name__ == "__main__":
 	file = open(fileName, 'r')#open for reading
 	contents = file.read()
 	fileSize = len(contents)
-	#startControlChannel(fileName, str(fileSize))
+	startControlChannel(fileName, str(fileSize))
+	time.sleep(5)
 	startDataChannel(contents)
