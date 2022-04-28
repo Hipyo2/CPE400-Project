@@ -6,7 +6,7 @@ import socket
 import os
 import pickle 
 
-host = socket.gethostname()
+host = socket.gethostbyname('localhost')
 port = 12345
 address = (host, port)
 fileName = None
@@ -21,11 +21,11 @@ class udp_server_connection():
 		print(f"[NEW CONNECTION] UDP connected.")
 		established = True
 		while established: 
-			packet, addr = self.server.recvfrom(1024)#receives up to 1024 Bytes
+			packet, addr = self.server.recvfrom(24)#receives up to 1024 Bytes
 			packet = packet.decode('ascii')
 			if packet != '@':
-				print("{}".format(packet))
-				msg = "received up to " + str(len(packet)) + " bytes"
+				print("{}".format(packet), end="")
+				msg = str(len(packet))
 				self.server.sendto(msg.encode('ascii'), addr)
 			else:
 				established = False
@@ -60,4 +60,3 @@ if __name__ == "__main__":
 	tcpServer.serverConnectTCP()
 	udpServer = udp_server_connection()
 	udpServer.serverConnectUDP()
-	
