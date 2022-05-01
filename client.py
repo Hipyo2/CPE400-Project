@@ -26,26 +26,30 @@ def startDataChannel(contents):
 	#for x in contents:
 	while established:
 		checksum = hashlib.sha256(str(sequenceNumber).encode('ascii')).hexdigest()
-		packet = pickle.dumps([sequenceNumber, checksum, contents[contentIndex]])
+		contentChecksum = hashlib.sha256((contents[contentIndex]).encode('ascii')).hexdigest()
+		packet = pickle.dumps([sequenceNumber, checksum, contentChecksum, contents[contentIndex]])
 		udpClient.sendto(bytearray(packet), address)
-		packet, addr = udpClient.recvfrom(1024)
-		message = pickle.loads(packet)
+		packetRecv, addr = udpClient.recvfrom(1024)
+		message = pickle.loads(packetRecv)
 		size = message[0]
-		contentIndex = message[1]
+
+
 		sequenceNumber = sequenceNumber + size
-		b_arr = bytearray((contents[contentIndex]).encode('ascii'))
+		#b_arr = bytearray((contents[contentIndex]).encode('ascii'))
 		print("[SERVER RESPONSE]: {}".format(size))
 		i = 0
-		while i < size:
-			b_arr.pop(0)
-			i = i + 1
-		contents[contentIndex] = b_arr.decode('ascii')
-		contentIndex = contentIndex + 1
-		if sequenceNumber == fileSize and contentIndex == packetNum:
+		#while i < size:
+		#	b_arr.pop(0)
+		#	i = i + 1
+		#contents[contentIndex] = b_arr.decode('ascii')
+		contentIndex = message[1]
+		#contentIndex = contentIndex + 1
+		if fileSize == sequenceNumber and contentIndex == packetNum:
 			established = False
-
 	closeConnection = '@'
-	packet = pickle.dumps([sequenceNumber, checksum, closeConnection])
+	checksum = hashlib.sha256(str(sequenceNumber).encode('ascii')).hexdigest()
+	contentChecksum = hashlib.sha256(('@').encode('ascii')).hexdigest()
+	packet = pickle.dumps([sequenceNumber, checksum, contentChecksum,closeConnection])
 	#udpClient.sendto(closeConnection.encode('ascii'), address)
 	udpClient.sendto(bytearray(packet), address)
 
@@ -69,7 +73,7 @@ if __name__ == "__main__":
 	file = open(fileName, 'r')#open for reading
 	contents = []
 	while True:
-		data = file.read(300)
+		data = file.read(200)
 		contents.append(data)
 		if data == '':
 			break

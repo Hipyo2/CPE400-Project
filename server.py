@@ -27,19 +27,25 @@ class udp_server_connection():
 		while established: 
 			packet, addr = self.server.recvfrom(1024)#receives up to 1024 Bytes
 			message = pickle.loads(packet)
+			
 			clientChecksum = message[1]
+			clientChecksum2 = message[2]
 			#print(clientChecksum)
 			serverChecksum = hashlib.sha256(str(message[0]).encode('ascii')).hexdigest()
+			serverChecksum2 = hashlib.sha256(str(message[3]).encode('ascii')).hexdigest()
+
 			#serverChecksum = packet[0]
 			#print(serverChecksum)
-			if clientChecksum == serverChecksum:
-				packet = message[2]
+			if clientChecksum == serverChecksum and clientChecksum2 == serverChecksum2:
+				packet = message[3]
 				if packet != '@':
 					print("{}".format(packet), end="")
 					#msg = str(len(packet))
-					msg = pickle.dumps([len(packet), packetNum])
-					self.server.sendto(bytearray(msg), addr)
 					packetNum = packetNum + 1
+					msg = pickle.dumps([len(packet), packetNum])
+					
+					self.server.sendto(bytearray(msg), addr)
+					
 				else:
 					print("Closing server")
 					established = False
@@ -61,14 +67,21 @@ class tcp_server_connection():
 		conn, addr = self.server.accept()
 		print(f"[NEW CONNECTION] {addr} connected.")
 		established = True
-		while established: 
-			packet = conn.recv(1024).decode('ascii')#receives up to 1024 Bytes
-			if packet != '@':
-				print("Packet: {}".format(packet))
-				conn.send("Packet received.".encode('ascii'))
-			else:
-				print("Closing server")
-				established = False
+		
+		packet = conn.recv(1024).decode('ascii')#receives up to 1024 Bytes
+		fileName = packet
+		print("Packet: {}".format(fileName))
+		conn.send("Packet received.".encode('ascii'))
+		
+		packet = conn.recv(1024).decode('ascii')#receives up to 1024 Bytes
+		fileSize = packet
+		print("Packet: {}".format(fileSize))
+		conn.send("Packet received.".encode('ascii'))
+		
+		packet = conn.recv(1024).decode('ascii')#receives up to 1024 Bytes
+		if packet == '@':
+			print("Closing server")
+			established = False
 		conn.close()
 		
 
