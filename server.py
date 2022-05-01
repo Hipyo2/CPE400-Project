@@ -13,6 +13,7 @@ port = 12345
 address = (host, port)
 fileName = None
 fileSize = None
+packetNum = 0
 
 class udp_server_connection():
 	server = None
@@ -21,6 +22,7 @@ class udp_server_connection():
 	def serverConnectUDP(self):
 		self.server.bind(address)
 		print(f"[NEW CONNECTION] UDP connected.")
+		packetNum = 0
 		established = True
 		while established: 
 			packet, addr = self.server.recvfrom(1024)#receives up to 1024 Bytes
@@ -34,13 +36,18 @@ class udp_server_connection():
 				packet = message[2]
 				if packet != '@':
 					print("{}".format(packet), end="")
-					msg = str(len(packet))
-					self.server.sendto(msg.encode('ascii'), addr)
+					#msg = str(len(packet))
+					msg = pickle.dumps([len(packet), packetNum])
+					self.server.sendto(bytearray(msg), addr)
+					packetNum = packetNum + 1
 				else:
 					print("Closing server")
 					established = False
 			else:
-				print("Please retransmit...")
+				#msg = str(packetNum)
+				msg = pickle.dumps([len(packet), packetNum])
+				self.server.sendto(bytearray(msg), addr)
+				print("Retransmitting")
 		self.server.close()
 	
 class tcp_server_connection():

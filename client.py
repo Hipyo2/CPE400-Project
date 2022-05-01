@@ -15,26 +15,35 @@ udpClient = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)#SOCK_DGRAM establis
 host = socket.gethostbyname('localhost')
 port = 12345
 address = (host, port)
+packetNum = 0
+fileSize = 0
 
 def startDataChannel(contents):
 	established = True
 	size = 0
 	sequenceNumber = 0
+	contentIndex = 0
+	#for x in contents:
 	while established:
 		checksum = hashlib.sha256(str(sequenceNumber).encode('ascii')).hexdigest()
-		packet = pickle.dumps([sequenceNumber, checksum, contents])
+		packet = pickle.dumps([sequenceNumber, checksum, contents[contentIndex]])
 		udpClient.sendto(bytearray(packet), address)
-		size = int(udpClient.recvfrom(1024)[0].decode('ascii'))
+		packet, addr = udpClient.recvfrom(1024)
+		message = pickle.loads(packet)
+		size = message[0]
+		contentIndex = message[1]
 		sequenceNumber = sequenceNumber + size
-		b_arr = bytearray(contents.encode('ascii'))
+		b_arr = bytearray((contents[contentIndex]).encode('ascii'))
 		print("[SERVER RESPONSE]: {}".format(size))
 		i = 0
 		while i < size:
 			b_arr.pop(0)
 			i = i + 1
-		contents = b_arr.decode('ascii')
-		if size == 0:
+		contents[contentIndex] = b_arr.decode('ascii')
+		contentIndex = contentIndex + 1
+		if sequenceNumber == fileSize and contentIndex == packetNum:
 			established = False
+
 	closeConnection = '@'
 	packet = pickle.dumps([sequenceNumber, checksum, closeConnection])
 	#udpClient.sendto(closeConnection.encode('ascii'), address)
@@ -58,8 +67,15 @@ if __name__ == "__main__":
 	print("Please input file name")
 	fileName = input()
 	file = open(fileName, 'r')#open for reading
-	contents = file.read()
-	fileSize = len(contents)
+	contents = []
+	while True:
+		data = file.read(300)
+		contents.append(data)
+		if data == '':
+			break
+		
+	packetNum = len(contents)
+	fileSize = os.stat(fileName).st_size
 	startControlChannel(fileName, str(fileSize))
 	time.sleep(1)
 	startDataChannel(contents)
