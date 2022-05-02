@@ -2,6 +2,7 @@
 #Group: Brendan Aguiar, Nicholas Ang
 #UDP-based reliable data transfer algorithm
 
+#Python Libraries
 from copyreg import add_extension
 import socket
 import os
@@ -9,7 +10,8 @@ import time
 import hashlib
 import pickle
 
-
+#General socket setup - host, ports, addresses
+#Sockets created for TCP and UDP
 tcpClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)#SOCK_STREAM establishes TCP protocol
 udpClient = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)#SOCK_DGRAM establishes UDP protocol
 host = socket.gethostbyname('localhost')
@@ -18,74 +20,84 @@ address = (host, port)
 packetNum = 0
 fileSize = 0
 
+#UDP client connection - Transmits reliable data
 def startDataChannel(contents):
 	established = True
 	size = 0
 	sequenceNumber = 0
+	previousSequence = 0
 	contentIndex = 0
-	#for x in contents:
-	while established:
+	while established and contentIndex <= packetNum:
+		#Create packet with checksum, content checksum, sequence number, and file segment contents
+		checksum = hashlib.sha256(str(sequenceNumber).encode('ascii')).hexdigest()
+		contentChecksum = hashlib.sha256((contents[contentIndex]).encode('ascii')).hexdigest()
+		packet = pickle.dumps([sequenceNumber, checksum, contentChecksum, contents[contentIndex]])
 		try:
-			checksum = hashlib.sha256(str(sequenceNumber).encode('ascii')).hexdigest()
-			contentChecksum = hashlib.sha256((contents[contentIndex]).encode('ascii')).hexdigest()
-			packet = pickle.dumps([sequenceNumber, checksum, contentChecksum, contents[contentIndex]])
-			udpClient.sendto(bytearray(packet), address)
+			#if sequences match properly, send packet
+			if previousSequence == sequenceNumber:
+				udpClient.sendto(bytearray(packet), address)
+			previousSequence = sequenceNumber
+			#Set timeout for ack message
 			udpClient.settimeout(2)
+			
+			#uncomment to test timeout functionality
+			time.sleep(3)
 			packetRecv, addr = udpClient.recvfrom(1024)
 			message = pickle.loads(packetRecv)
+			
+
+			#check if ack number is the same as the current sequence
 			if sequenceNumber != message[0]:
 				sequenceNumber = message[0]
 			else:
 				print("[SERVER RESPONSE]: Retransmitting")
-			#if(sequenceNumber != fileSize):
+			#print current ack number
 			print("[SERVER RESPONSE]: Ack Number:{}".format(sequenceNumber))
-			#else:
-			#	print("[SERVER RESPONSE]: END OF FILE DOWNLOAD\nACK NUMBER: {}".format(sequenceNumber))
+			#packet number is set to the packet number in message
 
-			#sequenceNumber = sequenceNumber + size
-			#b_arr = bytearray((contents[contentIndex]).encode('ascii'))
-
-			i = 0
-			#while i < size:
-			#	b_arr.pop(0)
-			#	i = i + 1
-			#contents[contentIndex] = b_arr.decode('ascii')
 			contentIndex = message[1]
-			#contentIndex = contentIndex + 1
+			#Check if file has been completely sent and no packets remain
 			if fileSize == sequenceNumber and contentIndex == packetNum:
 				established = False
+				break
+		#If socket times out, resend packet
 		except socket.timeout:
-			checksum = hashlib.sha256(str(sequenceNumber).encode('ascii')).hexdigest()
-			contentChecksum = hashlib.sha256((contents[contentIndex]).encode('ascii')).hexdigest()
-			packet = pickle.dumps([sequenceNumber, checksum, contentChecksum, contents[contentIndex]])
-			udpClient.sendto(bytearray(packet), address)
-			print("Retransmitting")
-			
+			sequenceNumber = previousSequence
+			print("[SERVER RESPONSE]: Timeout occurred... Retransmitting")
+	#After file is completely sent, send close connection delimiter and checksum for final sequence number to server
 	closeConnection = '@'
 	checksum = hashlib.sha256(str(sequenceNumber).encode('ascii')).hexdigest()
 	contentChecksum = hashlib.sha256(('@').encode('ascii')).hexdigest()
 	packet = pickle.dumps([sequenceNumber, checksum, contentChecksum,closeConnection])
-	#udpClient.sendto(closeConnection.encode('ascii'), address)
 	udpClient.sendto(bytearray(packet), address)
 
-
+#TCP client connection
 def startControlChannel(fileName, fileSize):
 	tcpClient.connect(address)
+	
+	#Send file name and receive ack for file name
 	tcpClient.send(fileName.encode('ascii'))
 	recmsg1 = tcpClient.recv(1024).decode('ascii')
 	print("[SERVER RESPONSE]: {}".format(recmsg1))
+	
+	#Send file size and receive ack for file size
 	tcpClient.send(fileSize.encode('ascii'))
 	recmsg2 = tcpClient.recv(1024).decode('ascii')
 	print("[SERVER RESPONSE]: {}".format(recmsg2))
+	
+	#Send close connection delimiter
 	closeConnection = '@'
 	tcpClient.send(closeConnection.encode('ascii'))
 
 
-
+#Main Function
 if __name__ == "__main__":
+	#Get user-inputted text file
 	print("Please input file name")
 	fileName = input()
 	file = open(fileName, 'r')#open for reading
+	
+	#Break file up into 200 Byte segments
 	contents = []
 	while True:
 		data = file.read(200)
@@ -93,8 +105,11 @@ if __name__ == "__main__":
 		if data == '':
 			break
 		
+	#Start sending packet metadata
 	packetNum = len(contents)
 	fileSize = os.stat(fileName).st_size
 	startControlChannel(fileName, str(fileSize))
+	
+	#wait 1 second before starting UDP data channel and transfer
 	time.sleep(1)
 	startDataChannel(contents)
