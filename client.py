@@ -25,27 +25,42 @@ def startDataChannel(contents):
 	contentIndex = 0
 	#for x in contents:
 	while established:
-		checksum = hashlib.sha256(str(sequenceNumber).encode('ascii')).hexdigest()
-		contentChecksum = hashlib.sha256((contents[contentIndex]).encode('ascii')).hexdigest()
-		packet = pickle.dumps([sequenceNumber, checksum, contentChecksum, contents[contentIndex]])
-		udpClient.sendto(bytearray(packet), address)
-		packetRecv, addr = udpClient.recvfrom(1024)
-		message = pickle.loads(packetRecv)
-		size = message[0]
+		try:
+			checksum = hashlib.sha256(str(sequenceNumber).encode('ascii')).hexdigest()
+			contentChecksum = hashlib.sha256((contents[contentIndex]).encode('ascii')).hexdigest()
+			packet = pickle.dumps([sequenceNumber, checksum, contentChecksum, contents[contentIndex]])
+			udpClient.sendto(bytearray(packet), address)
+			udpClient.settimeout(2)
+			packetRecv, addr = udpClient.recvfrom(1024)
+			message = pickle.loads(packetRecv)
+			if sequenceNumber != message[0]:
+				sequenceNumber = message[0]
+			else:
+				print("[SERVER RESPONSE]: Retransmitting")
+			#if(sequenceNumber != fileSize):
+			print("[SERVER RESPONSE]: Ack Number:{}".format(sequenceNumber))
+			#else:
+			#	print("[SERVER RESPONSE]: END OF FILE DOWNLOAD\nACK NUMBER: {}".format(sequenceNumber))
 
+			#sequenceNumber = sequenceNumber + size
+			#b_arr = bytearray((contents[contentIndex]).encode('ascii'))
 
-		sequenceNumber = sequenceNumber + size
-		#b_arr = bytearray((contents[contentIndex]).encode('ascii'))
-		print("[SERVER RESPONSE]: {}".format(size))
-		i = 0
-		#while i < size:
-		#	b_arr.pop(0)
-		#	i = i + 1
-		#contents[contentIndex] = b_arr.decode('ascii')
-		contentIndex = message[1]
-		#contentIndex = contentIndex + 1
-		if fileSize == sequenceNumber and contentIndex == packetNum:
-			established = False
+			i = 0
+			#while i < size:
+			#	b_arr.pop(0)
+			#	i = i + 1
+			#contents[contentIndex] = b_arr.decode('ascii')
+			contentIndex = message[1]
+			#contentIndex = contentIndex + 1
+			if fileSize == sequenceNumber and contentIndex == packetNum:
+				established = False
+		except socket.timeout:
+			checksum = hashlib.sha256(str(sequenceNumber).encode('ascii')).hexdigest()
+			contentChecksum = hashlib.sha256((contents[contentIndex]).encode('ascii')).hexdigest()
+			packet = pickle.dumps([sequenceNumber, checksum, contentChecksum, contents[contentIndex]])
+			udpClient.sendto(bytearray(packet), address)
+			print("Retransmitting")
+			
 	closeConnection = '@'
 	checksum = hashlib.sha256(str(sequenceNumber).encode('ascii')).hexdigest()
 	contentChecksum = hashlib.sha256(('@').encode('ascii')).hexdigest()
