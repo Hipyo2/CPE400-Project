@@ -18,7 +18,6 @@ host = socket.gethostbyname('localhost')
 port = 12345
 address = (host, port)
 packetNum = 0
-fileSize = 0
 
 #UDP client connection - Transmits reliable data
 def startDataChannel(contents):
@@ -33,15 +32,12 @@ def startDataChannel(contents):
 		contentChecksum = hashlib.sha256((contents[contentIndex]).encode('ascii')).hexdigest()
 		packet = pickle.dumps([sequenceNumber, checksum, contentChecksum, contents[contentIndex]])
 		try:
-			#if sequences match properly, send packet
-			if previousSequence == sequenceNumber:
-				udpClient.sendto(bytearray(packet), address)
+			#send packet
+			udpClient.sendto(bytearray(packet), address)
 			previousSequence = sequenceNumber
 			#Set timeout for ack message
-			udpClient.settimeout(2)
+			udpClient.settimeout(3)
 			
-			#uncomment to test timeout functionality
-			time.sleep(3)
 			packetRecv, addr = udpClient.recvfrom(1024)
 			message = pickle.loads(packetRecv)
 			
@@ -107,6 +103,7 @@ if __name__ == "__main__":
 		
 	#Start sending packet metadata
 	packetNum = len(contents)
+	global fileSize 
 	fileSize = os.stat(fileName).st_size
 	startControlChannel(fileName, str(fileSize))
 	

@@ -37,10 +37,14 @@ class udp_server_connection():
 		while established: 
 			#receives up to 1024 Bytes
 			packet = None
+			
+			#uncomment to test timeout functionality
+			#time.sleep(3)
+			
 			packet, addr = self.server.recvfrom(1024)
 			
 			#simulate packet loss with random values 
-			if random.randint(0,3) != 0:
+			if random.randint(0,15) != 0:
 				#packet is loaded into variables
 				message = pickle.loads(packet)
 				
@@ -55,14 +59,18 @@ class udp_server_connection():
 				if clientChecksum == serverChecksum and clientChecksum2 == serverChecksum2:
 					packet = message[3]
 					#output packet contents
-					if packet != '@':
-						print("{}".format(packet), end="")
-						#Send to client, ack number and packet number
-						previousAck = ackNumber
-						packetNum = packetNum + 1
-						ackNumber = ackNumber + len(packet)
-						msg = pickle.dumps([ackNumber, packetNum])
-						self.server.sendto(bytearray(msg), addr)
+					if packet != '@' :
+						if ackNumber == message[0]:
+							print("{}".format(packet), end="")
+							#Send to client, ack number and packet number
+							previousAck = ackNumber
+							packetNum = packetNum + 1
+							ackNumber = ackNumber + len(packet)
+							msg = pickle.dumps([ackNumber, packetNum])
+							self.server.sendto(bytearray(msg), addr)
+						else:
+							msg = pickle.dumps([ackNumber, packetNum])
+							self.server.sendto(bytearray(msg), addr)
 						
 
 					#check end condition and if file is completely downloaded, output closed server
