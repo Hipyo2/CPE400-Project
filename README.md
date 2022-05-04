@@ -1,8 +1,8 @@
 # CPE400-Project
-# Group - Brendan Aguiar, Nicholas Ang
-# UDP-based reliable data transfer algorithm
+ Group - Brendan Aguiar, Nicholas Ang
+ UDP-based reliable data transfer algorithm
 
-#Running Instructions:
+# Running Instructions:
 Start the server
 * Open a terminal
 * Type and run python3 server.py
