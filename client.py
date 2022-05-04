@@ -36,7 +36,7 @@ def startDataChannel(contents):
 			udpClient.sendto(bytearray(packet), address)
 			previousSequence = sequenceNumber
 			#Set timeout for ack message
-			udpClient.settimeout(3)
+			udpClient.settimeout(0.9)
 			
 			packetRecv, addr = udpClient.recvfrom(1024)
 			message = pickle.loads(packetRecv)
@@ -53,13 +53,12 @@ def startDataChannel(contents):
 
 			contentIndex = message[1]
 			#Check if file has been completely sent and no packets remain
-			if fileSize == sequenceNumber and contentIndex == packetNum:
+			if fileSize == sequenceNumber:
 				established = False
 				break
 		#If socket times out, resend packet
 		except socket.timeout:
 			sequenceNumber = previousSequence
-			print("[SERVER RESPONSE]: Timeout occurred... Retransmitting")
 	#After file is completely sent, send close connection delimiter and checksum for final sequence number to server
 	closeConnection = '@'
 	checksum = hashlib.sha256(str(sequenceNumber).encode('ascii')).hexdigest()

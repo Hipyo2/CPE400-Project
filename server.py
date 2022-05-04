@@ -39,7 +39,7 @@ class udp_server_connection():
 			packet = None
 			
 			#uncomment to test timeout functionality
-			#time.sleep(3)
+			#time.sleep(1)
 			
 			packet, addr = self.server.recvfrom(1024)
 			
@@ -59,7 +59,7 @@ class udp_server_connection():
 				if clientChecksum == serverChecksum and clientChecksum2 == serverChecksum2:
 					packet = message[3]
 					#output packet contents
-					if packet != '@' :
+					if message[3] != '@': 
 						if ackNumber == message[0]:
 							print("{}".format(packet), end="")
 							#Send to client, ack number and packet number
@@ -76,7 +76,7 @@ class udp_server_connection():
 					#check end condition and if file is completely downloaded, output closed server
 					else:
 						if str(message[0]) == fileSize:
-							print("Closing server")
+							print("\nClosing server")
 							established = False
 							
 						else:
